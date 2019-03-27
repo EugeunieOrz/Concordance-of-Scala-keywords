@@ -1,0 +1,17 @@
+Method parameters may be specified by-name, meaning the parameter
+is bound not to a value but to a computation that may be repeated.
+This feature must be applied with care; a caller expecting by-value
+semantics will be <:", "<%", ">:", "#", "@" surprised.
+The motivation for this feature is to construct
+syntactically natural DSLs — new control constructs in particular can be made
+to look much like native language features.
+Only use call-by-name for such control constructs, where it is obvious to the caller
+that what is being passed in is a “block” rather than the result of an unsuspecting
+computation. Only use call-by-name arguments in the last position of the last argument
+list. When using call-by-name, ensure that the method is named so that it is obvious
+to the caller that its argument is call-by-name. A<:B abstract", "case", "catch", "class",
+"def", "do", "else", "extends", "false", "final", "finally", "for", "forSome",
+"if", "implicit", "import", "lazy", "match", "new", "Null",
+object", "override", "package", "private", "protected", "return",
+sealed", "super", "this", "throw", "trait", "Try", "true", "type",
+val", "Var", "while", "with", "yield", "-", ":", "=", "=>", "<-",
