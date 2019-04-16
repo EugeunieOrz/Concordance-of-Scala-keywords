@@ -4,12 +4,16 @@ import scala.io.Source
 import scala.io.StdIn
 import scala.collection.mutable.Map
 import scala.collection.immutable.ListMap
+import scala.annotation.tailrec
 
 /**
  * The program "Concordance.scala" analyses a Scala source file and produces a concordance
  * of the Scala keywords used in a file.
  * The following functional programming patterns were implemented in the program:
- * - pattern matching
+ * - currying
+ * - partially applied functions
+ * - @tailrec annotation
+ * - pattern matching and deconstruction
  * - value definition
  * - for comprehension
  * - map function
@@ -79,24 +83,25 @@ object Concordance extends App {
    * which are connected by "-".
    */
 
-  // split the list if the int is less or equal to the next int
-  def splitList(list: List[Int]) = {
-    var element = list.head
-    list span { y =>
-      val a = y <= element+1;
-      element = y;
-      a
-    }
-  }
 
-  // check for ranges of consecutive numbers using pattern matching and recursion
-  def checkForRange(list: List[Int]): List[List[Int]] = list match {
-     case Nil => List()
-     case _ => splitList(list) match {
-        case (range, Nil) => List(range)
-        case (range, rest) => range :: checkForRange(rest)
+   // find ranges of consecutive numbers
+   def findConsecNums(list: List[Int])(f: (Int, Int) => Boolean): List[List[Int]] = {
+     /**
+      * @tailrec makes sure that the method will be compiled with tail call optimization
+      * that converts the recursive form into a loop
+      */
+     @tailrec
+     def findNums(lst: List[Int], result: List[List[Int]], acc: List[Int]): List[List[Int]] = lst match {
+       case Nil => acc.reverse :: result
+       case x :: xs => acc match {
+         case Nil => findNums(xs, result, x :: acc)
+         case y :: ys if(f(x,y)) => findNums(xs, result, x :: acc)
+         case _ => findNums(xs, acc.reverse :: result, x :: List())
+       }
      }
-  }
+     val r = findNums(list, List(), List())
+     r.reverse
+   }
 
   // concatenate the first and last element of range with "-"
   def makeRangeString(list: List[List[Int]]) = list map { x =>
@@ -110,21 +115,22 @@ object Concordance extends App {
    */
   def limitMaxWidthOutput(list: List[Int]) = {
     // value definition
-    val str = makeRangeString(checkForRange(list))
-    if(str.length > 20) {
-      val strForPrint = str.split(",").grouped(20).map(s => s.mkString(","))
+    val r = findConsecNums(list) _
+    val str = makeRangeString(r((x,y) => x - y == 1))
+    if(str.length > 5) {
+			val strForPrint = str.split(",").grouped(5).map(s => s.mkString(","))
          .foldLeft("") { (s: String, l: String) =>
            s + s"""$l
                    |${"\t\t\t      "}""".stripMargin
          }
-      s"""${strForPrint.substring(0, strForPrint.length - 10)}""".stripMargin
+      s"""${strForPrint}""".stripMargin
     }  else str
   }
 
   // print formatted result
-  val keyword = "Keyword"
-  val count = "count"
-  val lineNum = "lines"
+  val k = "Keyword"
+  val ln = "Line Numbers"
+  val count = "Count"
 
   /**
    * Formatted the final output as follows:
@@ -135,7 +141,7 @@ object Concordance extends App {
   val format = "%-20s%-10s%-22s\n"
 
   // print the headers for the table
-  printf(format, keyword, count, lineNum)
+  printf(format, k, count, ln)
 
   /**
    * Print each key and value from the map of keywords and corresponding list of line numbers.
